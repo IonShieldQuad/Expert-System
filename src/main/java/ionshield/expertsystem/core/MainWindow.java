@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.basic.BasicLookAndFeel;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -34,6 +35,8 @@ public class MainWindow {
     private JButton addOutputButton;
     private JButton deleteOutputButton;
     private JButton loadOutputButton;
+    private JButton filterButton;
+    private JButton clearButton;
 
     private DefaultTableModel inputTableModel;
     private DefaultTableModel outputTableModel;
@@ -45,6 +48,10 @@ public class MainWindow {
     private Map<String, Symbol> outputSettingsVariables = new HashMap<>();
     private Map<String, Rule> rulesSettings = new HashMap<>();
     private Map<String, Symbol> inputVariables = new HashMap<>();
+
+    TableRowSorter<DefaultTableModel> inputSorter;
+
+    DependencyTree tree = new DependencyTree(new HashSet<>());
 
     private int iterations;
 
@@ -68,6 +75,9 @@ public class MainWindow {
         inputSettingsTable.setModel(inputSettingsTableModel);
         outputSettingsTable.setModel(outputSettingsTableModel);
         rulesSettingsTable.setModel(rulesSettingsTableModel);
+
+        inputSorter = new TableRowSorter<>(inputTableModel);
+        inputTable.setRowSorter(inputSorter);
 
         addInputButton.addActionListener(e -> {
             inputSettingsTableModel.addRow(new Object[inputSettingsTableModel.getColumnCount()]);
@@ -204,6 +214,26 @@ public class MainWindow {
             }
         });
 
+        filterButton.addActionListener(e -> {
+            int row = outputTable.getSelectedRow();
+            if (row < 0) {
+                inputSorter.setRowFilter(null);
+            }
+            else {
+                List<RowFilter<Object, Object>> filters = new ArrayList<>();
+                Set<String> strings = tree.getBaseDependencies(outputTable.getModel().getValueAt(row, Config.OutputTable.getIndex("name")).toString());
+                for (String s : strings) {
+                    filters.add(RowFilter.regexFilter(s));
+                }
+
+                inputSorter.setRowFilter(RowFilter.orFilter(filters));
+            }
+        });
+
+        clearButton.addActionListener(e -> {
+            inputSorter.setRowFilter(null);
+        });
+
         applySettings();
         log.setText("");
 
@@ -287,6 +317,7 @@ public class MainWindow {
             rulesSettings.put(String.valueOf(i), rule);
         }
 
+        tree = new DependencyTree(rulesSettings.values());
         log.append(System.lineSeparator() + "Settings applied");
     }
 
@@ -341,12 +372,15 @@ public class MainWindow {
 
         for (int i = 0; i < outputTableModel.getRowCount(); i++) {
             String name = Optional.ofNullable(outputTableModel.getValueAt(i, Config.OutputTable.getIndex("name"))).orElse("").toString();
-            if (outputTableModel.getValueAt(i, Config.InputTable.getIndex("value")) == null) {
-                inputVariables.remove(name);
-                continue;
+            if (outputTableModel.getValueAt(i, Config.OutputTable.getIndex("value")) == null) {
+                //inputVariables.remove(name); //??
+                //continue;
             }
             if (outputVariableNames.contains(name) && variables.get(name) != null) {
                 outputTableModel.setValueAt(variables.get(name).getValue(), i, Config.OutputTable.getIndex("value"));
+            }
+            else {
+                outputTableModel.setValueAt("", i, Config.OutputTable.getIndex("value"));
             }
         }
 

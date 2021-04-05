@@ -13,6 +13,16 @@ public class Rule {
     private List<Symbol> symbols = new ArrayList<>();
     private List<Symbol> symbolsThen = new ArrayList<>();
     private List<Symbol> symbolsElse = new ArrayList<>();
+    private List<Symbol> inputVars = new ArrayList<>();
+    private List<Symbol> outputVars = new ArrayList<>();
+
+    public List<Symbol> getInputVars() {
+        return inputVars;
+    }
+
+    public List<Symbol> getOutputVars() {
+        return outputVars;
+    }
 
     public static Rule parseRule(String input, String thenString, String elseString) {
         if (input == null) {
@@ -34,6 +44,62 @@ public class Rule {
         substrings.forEach(s -> rule.symbols.add(Symbol.parseSymbol(s, rule.symbolPack)));
         substringsThen.forEach(s -> rule.symbolsThen.add(Symbol.parseSymbol(s, rule.symbolPack)));
         substringsElse.forEach(s -> rule.symbolsElse.add(Symbol.parseSymbol(s, rule.symbolPack)));
+
+        Set<String> inputNames = new HashSet<>();
+        Set<String> outputNames = new HashSet<>();
+
+        //Find all input and output variables
+        for (int i = 0; i < rule.symbols.size(); i++) {
+            Symbol s = rule.symbols.get(i);
+            if (s.getName() != null && !s.getName().isEmpty()) {
+                if (i != rule.symbols.size() - 1 && rule.symbols.get(i + 1).getType() == Symbol.Type.OP && rule.symbols.get(i + 1).getValue().equals("=")) {
+                    if (!outputNames.contains(s.getName())) {
+                        rule.outputVars.add(s);
+                        outputNames.add(s.getName());
+                    }
+                }
+                else {
+                    if (!inputNames.contains(s.getName())) {
+                        rule.inputVars.add(s);
+                        inputNames.add(s.getName());
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < rule.symbolsThen.size(); i++) {
+            Symbol s = rule.symbolsThen.get(i);
+            if (s.getName() != null && !s.getName().isEmpty()) {
+                if (i != rule.symbolsThen.size() - 1 && rule.symbolsThen.get(i + 1).getType() == Symbol.Type.OP && rule.symbolsThen.get(i + 1).getValue().equals("=")) {
+                    if (!outputNames.contains(s.getName())) {
+                        rule.outputVars.add(s);
+                        outputNames.add(s.getName());
+                    }
+                }
+                else {
+                    if (!inputNames.contains(s.getName())) {
+                        rule.inputVars.add(s);
+                        inputNames.add(s.getName());
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < rule.symbolsElse.size(); i++) {
+            Symbol s = rule.symbolsElse.get(i);
+            if (s.getName() != null && !s.getName().isEmpty()) {
+                if (i != rule.symbolsElse.size() - 1 && rule.symbolsElse.get(i + 1).getType() == Symbol.Type.OP && rule.symbolsElse.get(i + 1).getValue().equals("=")) {
+                    if (!outputNames.contains(s.getName())) {
+                        rule.outputVars.add(s);
+                        outputNames.add(s.getName());
+                    }
+                }
+                else {
+                    if (!inputNames.contains(s.getName())) {
+                        rule.inputVars.add(s);
+                        inputNames.add(s.getName());
+                    }
+                }
+            }
+        }
 
         rule.symbols = rule.toPostfixNotation(rule.symbols);
         rule.symbolsThen = rule.toPostfixNotation(rule.symbolsThen);
